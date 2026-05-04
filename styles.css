@@ -23,10 +23,11 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-  font-family: "Avenir Next", "Proxima Nova", "Segoe UI", Roboto, system-ui, sans-serif;
+  font-family: "Nunito", "Avenir Next", "Proxima Nova", "Segoe UI", Roboto, system-ui, sans-serif;
   color: var(--ink);
   background: var(--cream);
   -webkit-font-smoothing: antialiased;
+  font-weight: 600;
 }
 a { color: var(--green-dark); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -102,8 +103,8 @@ button { font-family: inherit; cursor: pointer; }
   flex-wrap: wrap;
 }
 .subject-tab {
-  padding: 14px 18px;
-  font-weight: 700;
+  padding: 16px 20px;
+  font-weight: 800;
   font-size: 15px;
   color: #555;
   background: none;
@@ -114,6 +115,7 @@ button { font-family: inherit; cursor: pointer; }
   display: flex;
   align-items: center;
   gap: 8px;
+  letter-spacing: 0.1px;
 }
 .subject-tab:hover { color: var(--ink); }
 .subject-tab.active { color: var(--ink); }
@@ -140,9 +142,10 @@ main {
   flex-wrap: wrap;
 }
 .page-head h1 {
-  font-size: 28px;
+  font-size: 32px;
   margin: 0;
-  font-weight: 800;
+  font-weight: 900;
+  letter-spacing: -0.5px;
 }
 .page-head .subtitle { color: var(--muted); font-size: 14px; margin-top: 4px; }
 .head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -163,11 +166,12 @@ main {
   background: white;
   border: none;
   border-right: 1px solid var(--line);
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: 800;
+  font-size: 15px;
   color: #555;
   text-align: center;
   cursor: pointer;
+  transition: background 0.1s;
 }
 .grade-pill:last-child { border-right: none; }
 .grade-pill:hover { background: var(--green-soft); color: var(--green-darker); }
@@ -259,22 +263,31 @@ main {
   margin-bottom: 4px;
 }
 .letter-circle {
-  width: 36px; height: 36px;
+  width: 50px; height: 50px;
   border-radius: 50%;
   display: grid; place-items: center;
   font-weight: 900;
   color: white;
-  font-size: 16px;
+  font-size: 22px;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
-.skill-section-head h2 { font-size: 19px; margin: 0; font-weight: 700; }
-.skill-section-head .meta { color: var(--muted); font-size: 13px; margin-left: auto; }
+.skill-section-head { padding: 16px 4px 12px; border-bottom: 2px solid var(--line); }
+.skill-section-head h2 { font-size: 22px; margin: 0; font-weight: 800; letter-spacing: -0.3px; }
+.skill-section-head .meta {
+  color: var(--muted);
+  font-size: 13px;
+  margin-left: auto;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 
 .skill-row {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 10px 14px 10px 50px;
+  padding: 12px 18px 12px 64px;
   border-bottom: 1px solid var(--line);
   cursor: pointer;
   background: white;
@@ -283,7 +296,13 @@ main {
   transition: background 0.1s;
 }
 .skill-row:hover { background: var(--green-soft); }
-.skill-row .code { color: var(--green-dark); font-weight: 800; font-size: 14px; min-width: 40px; }
+.skill-row .code {
+  color: var(--green-dark);
+  font-weight: 800;
+  font-size: 14px;
+  min-width: 44px;
+  font-family: "Nunito", sans-serif;
+}
 .skill-row .skill-name { flex: 1; display: flex; align-items: center; gap: 6px; }
 .skill-row:hover .skill-name { color: var(--green-dark); text-decoration: underline; }
 .skill-row .practice-cta {
@@ -818,3 +837,40 @@ main {
 }
 .muted { color: var(--muted); }
 hr.sep { border: none; border-top: 1px solid var(--line); margin: 14px 0; }
+
+/* Section heading inside main column */
+.section-h {
+  font-size: 18px;
+  margin: 28px 0 12px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+/* Mini recommended skill card on home side rail */
+.rec-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+  margin: 0 -6px;
+}
+.rec-mini:hover { background: var(--green-soft); }
+.rec-mini-ico {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  font-size: 17px;
+  color: white;
+  flex-shrink: 0;
+}
+.rec-mini-name {
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rec-mini-meta { color: var(--muted); font-size: 12px; }

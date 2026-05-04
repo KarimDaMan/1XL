@@ -232,8 +232,8 @@ function renderHome() {
   const root = el("div");
   root.appendChild(el("div", { class: "page-head" },
     el("div", {},
-      el("h1", {}, "Welcome to 1XL"),
-      el("div", { class: "subtitle" }, "Pick a subject to start practicing — or build your own skill.")
+      el("h1", {}, `Hi, ${state.profile.name}!`),
+      el("div", { class: "subtitle" }, "Where would you like to learn today? Pick a subject — or build your own skill.")
     ),
     el("div", { class: "head-actions" },
       el("button", { class: "btn", onclick: () => go("/share") }, "🔗 Share & import"),
@@ -241,36 +241,28 @@ function renderHome() {
     )
   ));
 
-  root.appendChild(el("div", { class: "ixl-banner" },
-    el("div", { class: "icon" }, "🎯"),
-    el("div", { class: "text" },
-      el("h3", {}, "Earn coins by mastering skills"),
-      el("p", {}, `You have ${state.coins} coins. Each correct answer earns up to 6 SmartScore — get to 100 to master a skill.`)
-    ),
-    el("button", { onclick: () => go("/prizes") }, "Go to prize shop"),
-  ));
+  const wrap = el("div", { class: "layout-with-side" });
+  const mainCol = el("div");
+  const sideCol = renderHomeSide();
 
+  // Subject grid
   const grid = el("div", { class: "subject-grid" });
   SUBJECTS.forEach(s => {
     const count = state.skills.filter(sk => sk.subject === s.id).length;
+    const mastered = state.skills.filter(sk => {
+      if (sk.subject !== s.id) return false;
+      const max = sk.scoring?.maxScore || 100;
+      return (state.progress[sk.id]?.score || 0) >= max;
+    }).length;
     grid.appendChild(el("div", { class: "subject-card", onclick: () => go(`/subject/${s.id}`) },
       el("div", { class: "icon", style: `background:${s.color}` }, s.icon),
-      el("div", {},
+      el("div", { style: "flex:1" },
         el("h3", {}, s.name),
-        el("div", { class: "count" }, `${count} skill${count === 1 ? "" : "s"}`)
+        el("div", { class: "count" }, `${count} skill${count === 1 ? "" : "s"}${mastered > 0 ? ` · ${mastered} mastered ★` : ""}`)
       )
     ));
   });
-  root.appendChild(grid);
-
-  // Newest community skills
-  const community = state.skills.filter(s => !s.builtin).slice(-8).reverse();
-  if (community.length > 0) {
-    root.appendChild(el("h2", { style: "margin:24px 0 12px;font-size:18px" }, "Newest community skills"));
-    const sec = el("div", { class: "skill-section" });
-    community.forEach(s => sec.appendChild(skillRow(s, state.progress[s.id])));
-    root.appendChild(sec);
-  }
+  mainCol.appendChild(grid);
 
   // Continue
   const inProgress = state.skills
@@ -278,13 +270,84 @@ function renderHome() {
     .filter(x => x.p && x.p.score > 0 && x.p.score < (x.s.scoring?.maxScore || 100))
     .slice(0, 6);
   if (inProgress.length > 0) {
-    root.appendChild(el("h2", { style: "margin:24px 0 12px;font-size:18px" }, "Continue where you left off"));
+    mainCol.appendChild(el("h2", { class: "section-h" }, "Continue where you left off"));
     const sec = el("div", { class: "skill-section" });
     inProgress.forEach(({ s, p }) => sec.appendChild(skillRow(s, p)));
-    root.appendChild(sec);
+    mainCol.appendChild(sec);
   }
 
+  // Newest community
+  const community = state.skills.filter(s => !s.builtin).slice(-8).reverse();
+  if (community.length > 0) {
+    mainCol.appendChild(el("h2", { class: "section-h" }, "Newest community skills"));
+    const sec = el("div", { class: "skill-section" });
+    community.forEach(s => sec.appendChild(skillRow(s, state.progress[s.id])));
+    mainCol.appendChild(sec);
+  }
+
+  wrap.appendChild(mainCol);
+  wrap.appendChild(sideCol);
+  root.appendChild(wrap);
   return root;
+}
+
+function renderHomeSide() {
+  const side = el("div");
+
+  // Coins / prizes card
+  const coinsCard = el("div", { class: "side-card" });
+  coinsCard.appendChild(el("h3", {}, "Your coins"));
+  coinsCard.appendChild(el("div", { style: "text-align:center;font-size:38px;font-weight:900;color:#876300;margin:6px 0" }, `🪙 ${state.coins}`));
+  coinsCard.appendChild(el("div", { class: "muted", style: "text-align:center;font-size:13px;margin-bottom:10px" },
+    "Earn coins by mastering skills."));
+  coinsCard.appendChild(el("button", { class: "btn btn-primary btn-sm", style: "width:100%",
+    onclick: () => go("/prizes") }, "Visit prize shop"));
+  side.appendChild(coinsCard);
+
+  // Recommended-for-you
+  const recs = pickRecommendations(4);
+  if (recs.length > 0) {
+    const rec = el("div", { class: "side-card", style: "margin-top:16px" });
+    rec.appendChild(el("h3", {}, "Recommended for you"));
+    recs.forEach(s => {
+      const subject = SUBJECTS.find(x => x.id === s.subject);
+      rec.appendChild(el("div", { class: "rec-mini", onclick: () => go(`/skill/${s.id}`) },
+        el("div", { class: "rec-mini-ico", style: `background:${subject?.color || "#999"}` }, subject?.icon || "★"),
+        el("div", { style: "flex:1;min-width:0" },
+          el("div", { class: "rec-mini-name" }, s.name),
+          el("div", { class: "rec-mini-meta" }, `${subject?.name || ""} · ${s.code}`)
+        )
+      ));
+    });
+    side.appendChild(rec);
+  }
+
+  // Awards summary
+  const totalSkills = state.skills.length;
+  const mastered = state.skills.filter(s => {
+    const max = s.scoring?.maxScore || 100;
+    return (state.progress[s.id]?.score || 0) >= max;
+  }).length;
+  const aw = el("div", { class: "side-card", style: "margin-top:16px" });
+  aw.appendChild(el("h3", {}, "Awards progress"));
+  aw.appendChild(el("div", { class: "trophy-row" },
+    el("span", {}, "Skills mastered"),
+    el("b", {}, `${mastered} / ${totalSkills}`)));
+  aw.appendChild(el("div", { class: "bar" }, el("span", { style: `width:${totalSkills ? (mastered/totalSkills)*100 : 0}%` })));
+  aw.appendChild(el("button", { class: "btn btn-sm", style: "width:100%", onclick: () => go("/awards") }, "View all awards"));
+  side.appendChild(aw);
+
+  return side;
+}
+
+function pickRecommendations(n) {
+  const inProgress = state.skills.filter(s => {
+    const sc = state.progress[s.id]?.score || 0;
+    const max = s.scoring?.maxScore || 100;
+    return sc > 0 && sc < max;
+  });
+  const untouched = state.skills.filter(s => !state.progress[s.id]);
+  return [...inProgress, ...untouched].slice(0, n);
 }
 
 // ---------- Subject (skill tree) ----------
@@ -442,10 +505,35 @@ function renderQuiz(skillId) {
     side.appendChild(el("hr", { class: "sep" }));
     side.appendChild(el("div", { class: "muted", style: "font-size:12px;text-align:center" },
       `+${scoring.correctPoints} / −${scoring.wrongPenalty} per question`));
+    side.appendChild(el("button", { class: "btn btn-sm", style: "width:100%;margin-top:10px",
+      onclick: showHint, disabled: session.locked ? "true" : null }, "💡 Hint"));
     if (!skill.builtin) {
-      side.appendChild(el("button", { class: "btn btn-sm", style: "width:100%;margin-top:10px",
+      side.appendChild(el("button", { class: "btn btn-sm", style: "width:100%;margin-top:6px",
         onclick: () => go(`/create-skill/${skill.id}`) }, "Edit this skill"));
     }
+  }
+
+  function showHint() {
+    if (session.locked) return;
+    const q = skill.questions[session.qIdx];
+    let hint;
+    if (q.type === "mc")     hint = `It starts with "${q.choices[q.answer].slice(0, 2)}..."`;
+    else if (q.type === "tf") hint = `Think carefully — is the statement actually true?`;
+    else if (q.type === "multi") hint = `There ${q.answers.length === 1 ? "is 1 correct answer" : `are ${q.answers.length} correct answers`}.`;
+    else if (q.type === "num") hint = `The answer is a number${q.tolerance ? " (with tolerance ±" + q.tolerance + ")" : ""}. ${q.answer < 0 ? "Negative." : q.answer === 0 ? "Zero." : q.answer < 10 ? "Single digit." : q.answer < 100 ? "Two digits." : "More than two digits."}`;
+    else                      hint = `Starts with "${String(q.answer).slice(0, 2)}..."`;
+    showModal(el("div", {},
+      el("h3", {}, "💡 Hint"),
+      el("p", {}, hint),
+      el("p", { class: "muted", style: "font-size:13px" }, "Using a hint costs 2 SmartScore."),
+      el("div", { class: "actions" }, el("button", { class: "btn btn-primary", onclick: () => {
+        session.score = Math.max(0, session.score - 2);
+        state.progress[skill.id] = { ...(state.progress[skill.id] || {}), score: session.score };
+        save();
+        renderSide();
+        closeModal();
+      } }, "Got it"))
+    ));
   }
 
   function renderQuestion() {
