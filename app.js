@@ -301,18 +301,20 @@ function renderSubject(subjectId, gradeArg) {
     el("button", { class: "btn btn-primary", onclick: () => go(`/create-skill/${subject.id}`) }, "+ Add a skill")
   ));
 
+  const activeGrade = gradeArg
+    ? decodeURIComponent(gradeArg)
+    : (GRADES.find(g => state.skills.some(s => s.subject === subjectId && s.grade === g)) || GRADES[0]);
+
   const strip = el("div", { class: "grade-strip" });
   GRADES.forEach(g => {
     const has = state.skills.some(s => s.subject === subjectId && s.grade === g);
     strip.appendChild(el("button", {
-      class: "grade-pill" + (gradeArg === g ? " active" : ""),
+      class: "grade-pill" + (activeGrade === g ? " active" : ""),
       style: !has ? "opacity:0.55" : null,
       onclick: () => go(`/subject/${subject.id}/${encodeURIComponent(g)}`)
     }, g));
   });
   root.appendChild(strip);
-
-  const activeGrade = gradeArg ? decodeURIComponent(gradeArg) : (GRADES.find(g => state.skills.some(s => s.subject === subjectId && s.grade === g)) || GRADES[0]);
 
   const wrap = el("div", { class: "layout-with-side" });
   const treeCol = el("div");
@@ -338,7 +340,9 @@ function renderSubject(subjectId, gradeArg) {
         el("h2", {}, cleanName),
         el("span", { class: "meta" }, `${list.length} skill${list.length === 1 ? "" : "s"}`)
       ));
-      list.forEach(s => sec.appendChild(skillRow(s, state.progress[s.id])));
+      // Tag the first untouched skill in this section as "recommended"
+      const firstUntouchedIdx = list.findIndex(s => !(state.progress[s.id]));
+      list.forEach((s, i) => sec.appendChild(skillRow(s, state.progress[s.id], { recommended: i === firstUntouchedIdx })));
       treeCol.appendChild(sec);
     });
   }
@@ -348,21 +352,25 @@ function renderSubject(subjectId, gradeArg) {
   return root;
 }
 
-function skillRow(s, p) {
+function skillRow(s, p, opts = {}) {
   const score = p ? p.score : 0;
   const maxScore = s.scoring?.maxScore || 100;
   const pct = Math.round((score / maxScore) * 100);
+  const mastered = pct >= 100;
   return el("div", { class: "skill-row", onclick: () => go(`/skill/${s.id}`) },
+    opts.recommended ? el("span", { class: "rec-dot", title: "Recommended next" }) : null,
     el("div", { class: "code" }, s.code || "—"),
     el("div", { class: "skill-name" },
       s.name,
+      mastered ? el("span", { class: "star-mastered", title: "Mastered" }, "★") : null,
       !s.builtin ? el("span", { class: "tag-new" }, "Community") : null,
       s.imported ? el("span", { class: "tag-imported" }, "Imported") : null
     ),
     el("div", { class: "qmark", title: s.builtin ? "Built-in skill" : `By ${s.author || "Unknown"}` }, "?"),
     !s.builtin ? el("div", { class: "author" }, `by ${s.author || "anon"}`) : el("div", { class: "author" }),
     el("div", { class: "num-problems" }, `${s.questions.length} problem${s.questions.length === 1 ? "" : "s"}`),
-    el("div", { class: "smartscore-mini" + (pct >= 100 ? " done" : "") }, score + "")
+    el("div", { class: "smartscore-mini" + (mastered ? " done" : "") }, score + ""),
+    el("span", { class: "practice-cta" }, "Practice")
   );
 }
 
@@ -422,12 +430,10 @@ function renderQuiz(skillId) {
 
   function renderSide() {
     side.innerHTML = "";
-    const pct = Math.round((session.score / scoring.maxScore) * 100);
+    const pct = Math.min(100, Math.round((session.score / scoring.maxScore) * 100));
     const mastered = session.score >= scoring.maxScore;
     side.appendChild(el("h3", {}, "SmartScore"));
-    const ring = el("div", { class: "score-ring" + (mastered ? " mastered" : ""), style: `--p:${pct}` },
-      el("span", {}, session.score + ""));
-    side.appendChild(ring);
+    side.appendChild(buildScoreRing(pct, session.score, scoring.maxScore, mastered));
     side.appendChild(el("div", { class: "muted", style: "text-align:center;margin-bottom:14px;font-size:13px" },
       mastered ? "Mastered! 🎉" : `Goal: ${scoring.maxScore}`));
     side.appendChild(el("div", { class: "bar-row" }, el("span", {}, "Answered"), el("b", {}, session.answeredCount + "")));
@@ -1550,6 +1556,28 @@ function importBackup(file) {
 }
 
 // ---------- UI utilities ----------
+function buildScoreRing(pct, score, maxScore, mastered) {
+  const r = 58;
+  const c = 2 * Math.PI * r;
+  const dash = c;
+  const offset = c * (1 - pct / 100);
+  const wrap = el("div", { class: "score-ring" + (mastered ? " mastered" : "") });
+  wrap.innerHTML = `
+    <svg viewBox="0 0 140 140">
+      <circle cx="70" cy="70" r="${r}" class="track" stroke-width="14" fill="none"/>
+      <circle cx="70" cy="70" r="${r}" class="fill" stroke-width="14" fill="none"
+              stroke-dasharray="${dash}" stroke-dashoffset="${offset}"
+              transform="rotate(-90 70 70)"/>
+    </svg>
+    <div class="score-text">
+      <div>
+        <div class="num">${score}</div>
+        <div class="of">of ${maxScore}</div>
+      </div>
+    </div>`;
+  return wrap;
+}
+
 function toast(msg) {
   const t = el("div", { class: "toast" }, msg);
   document.body.appendChild(t);
