@@ -10,19 +10,24 @@
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="logo" href="#/" data-route="home">
-        <span class="logo-1">1</span><span class="logo-x">X</span><span class="logo-l">L</span>
+      <a class="logo" href="#/" aria-label="1XL home">
+        <svg class="logo-svg" viewBox="0 0 100 36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <text x="0"  y="29" font-family="Avenir Next, Arial Black, sans-serif" font-weight="900" font-size="34" fill="#1ca64c">1</text>
+          <text x="22" y="29" font-family="Avenir Next, Arial Black, sans-serif" font-weight="900" font-size="34" fill="#0e6a30">X</text>
+          <text x="55" y="29" font-family="Avenir Next, Arial Black, sans-serif" font-weight="900" font-size="34" fill="#138a3e">L</text>
+        </svg>
       </a>
       <nav class="primary-nav">
         <a href="#/">Learning</a>
         <a href="#/recommendations">Recommendations</a>
         <a href="#/awards">Awards</a>
         <a href="#/prizes">Prize shop</a>
+        <a href="#/share">Share &amp; import</a>
       </nav>
       <div class="topbar-spacer"></div>
       <input class="search" id="search" placeholder="Search skills, topics..." />
       <div class="profile">
-        <span class="coin">🪙 <b id="coin-count">0</b></span>
+        <span class="coin" title="Your coins">🪙 <b id="coin-count">0</b></span>
         <span class="avatar" id="avatar">?</span>
       </div>
     </div>
@@ -34,10 +39,10 @@
   <main id="view"></main>
 
   <footer class="footer">
-    <div>© 1XL — Practice. Master. Win prizes you and the community design.</div>
+    <div>© 1XL — Practice. Master. Win prizes the community designs.</div>
   </footer>
 
-  <div class="modal-root" id="modal-root"></div>
+  <div id="modal-root"></div>
 
   <script src="app.js"></script>
 </body>
