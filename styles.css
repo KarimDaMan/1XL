@@ -173,6 +173,82 @@ main {
 .grade-pill:hover { background: var(--green-soft); color: var(--green-darker); }
 .grade-pill.active { background: var(--green); color: white; }
 
+/* Subject picker (in skill builder) */
+.subject-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.subject-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 8px;
+  border: 1px solid var(--line-2);
+  background: white;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--ink);
+}
+.subject-pick:hover { border-color: var(--green); }
+.subject-pick.active { background: var(--green-soft); border-color: var(--green-dark); color: var(--green-darker); }
+.subject-pick .ico {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: grid; place-items: center;
+  font-size: 14px;
+  color: white;
+  flex-shrink: 0;
+}
+
+/* Code field with auto badge */
+.code-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.code-row input { flex: 1; max-width: 160px; font-family: monospace; font-weight: 700; }
+.auto-badge {
+  background: var(--green-soft);
+  color: var(--green-darker);
+  border: 1px solid #c5e2cf;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.auto-badge.off { background: #fff5d4; color: #876300; border-color: #f0e0a8; }
+
+/* Live preview chip */
+.preview-row {
+  background: white;
+  border: 1px dashed var(--line-2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+.preview-row .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.preview-row .code {
+  color: var(--green-dark);
+  font-weight: 800;
+  font-family: monospace;
+}
+.preview-row .name { flex: 1; font-weight: 500; }
+
 .skill-section { margin-bottom: 28px; }
 .skill-section-head {
   display: flex;

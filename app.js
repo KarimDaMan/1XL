@@ -625,6 +625,38 @@ function answerText(q) {
 function normalize(s) { return (s || "").toString().trim().toLowerCase().replace(/\s+/g, " "); }
 
 // ---------- Skill builder ----------
+function nextCodeFor(subject, grade, letter, excludeId) {
+  const used = state.skills
+    .filter(s => s.subject === subject && s.grade === grade && s.id !== excludeId)
+    .map(s => s.code || "")
+    .filter(c => c.toUpperCase().startsWith(letter + "."))
+    .map(c => parseInt(c.split(".")[1], 10))
+    .filter(n => !Number.isNaN(n));
+  const max = used.length ? Math.max(...used) : 0;
+  return `${letter}.${max + 1}`;
+}
+function nextLetterFor(subject, grade) {
+  const used = new Set(state.skills
+    .filter(s => s.subject === subject && s.grade === grade)
+    .map(s => (s.group || "").trim().charAt(0).toUpperCase())
+    .filter(L => L >= "A" && L <= "Z"));
+  for (let i = 0; i < 26; i++) {
+    const L = String.fromCharCode(65 + i);
+    if (used.has(L)) continue;
+    return L;
+  }
+  return "A";
+}
+function existingSectionsFor(subject, grade) {
+  const map = new Map();
+  state.skills.filter(s => s.subject === subject && s.grade === grade).forEach(s => {
+    const m = (s.group || "").match(/^([A-Z])\.\s*(.*)$/);
+    if (!m) return;
+    if (!map.has(m[1])) map.set(m[1], m[2]);
+  });
+  return map;
+}
+
 function renderSkillBuilder(arg1, arg2) {
   let editing = null;
   let presetSubject = null;
@@ -634,31 +666,131 @@ function renderSkillBuilder(arg1, arg2) {
 
   const root = el("div", { class: "form-card" });
   root.appendChild(el("h2", {}, editing ? "Edit skill" : "Create a new skill"));
-  root.appendChild(el("p", { class: "help" }, "Build a practice skill in the IXL style. Mix question types, attach images, tune the SmartScore. Then share a link with friends to publish it."));
+  root.appendChild(el("p", { class: "help" }, "Build a practice skill in the IXL style. Mix question types, attach images, tune the SmartScore — then share a link to publish it."));
 
-  const subjectSelect = el("select", {}, ...SUBJECTS.map(s => {
-    const opt = el("option", { value: s.id }, s.name);
-    if ((editing && editing.subject === s.id) || (!editing && presetSubject === s.id)) opt.selected = true;
-    return opt;
-  }));
-  const gradeSelect = el("select", {}, ...GRADES.map(g => {
-    const opt = el("option", { value: g }, g);
-    if (editing && editing.grade === g) opt.selected = true;
-    return opt;
-  }));
+  // ----- Skill name -----
   const nameInput = el("input", { placeholder: "e.g. Adding fractions with like denominators", value: editing?.name || "" });
-  const groupInput = el("input", { placeholder: "e.g. A. Fractions", value: editing?.group || "A. " });
-  const codeInput = el("input", { placeholder: "e.g. A.2", value: editing?.code || "" });
-
   root.appendChild(el("div", { class: "field" }, el("label", {}, "Skill name"), nameInput));
+
+  // ----- Subject picker (visual pills) -----
+  let currentSubject = editing?.subject || presetSubject || "math";
+  const subjectRow = el("div", { class: "subject-picker" });
+  function paintSubjects() {
+    subjectRow.innerHTML = "";
+    SUBJECTS.forEach(s => {
+      const btn = el("button", {
+        class: "subject-pick" + (currentSubject === s.id ? " active" : ""),
+        onclick: () => { currentSubject = s.id; paintSubjects(); refreshLetters(); refreshCode(); }
+      });
+      btn.appendChild(el("span", { class: "ico", style: `background:${s.color}` }, s.icon));
+      btn.appendChild(el("span", {}, s.name));
+      subjectRow.appendChild(btn);
+    });
+  }
+  paintSubjects();
+  root.appendChild(el("div", { class: "field" }, el("label", {}, "Subject"), subjectRow));
+
+  // ----- Grade picker (wide pill row) -----
+  let currentGrade = editing?.grade || GRADES[3];
+  const gradeRow = el("div", { class: "grade-strip" });
+  function paintGrades() {
+    gradeRow.innerHTML = "";
+    GRADES.forEach(g => {
+      gradeRow.appendChild(el("button", {
+        class: "grade-pill" + (currentGrade === g ? " active" : ""),
+        onclick: () => { currentGrade = g; paintGrades(); refreshLetters(); refreshCode(); }
+      }, g));
+    });
+  }
+  paintGrades();
+  root.appendChild(el("div", { class: "field" }, el("label", {}, "Grade level"), gradeRow));
+
+  // ----- Section letter + section name + auto-code -----
+  const editingMatch = editing?.group?.match(/^([A-Z])\.\s*(.*)$/);
+  let currentLetter = editingMatch ? editingMatch[1] : (editing ? "A" : nextLetterFor(currentSubject, currentGrade));
+  let currentSectionName = editingMatch ? editingMatch[2] : "";
+
+  // If editing, treat existing code as override only if it doesn't match auto
+  let codeOverride = false;
+  if (editing && editing.code) {
+    codeOverride = editing.code !== nextCodeFor(editing.subject, editing.grade, currentLetter, editing.id);
+  }
+
+  const letterSelect = el("select", {});
+  function refreshLetters() {
+    letterSelect.innerHTML = "";
+    const sections = existingSectionsFor(currentSubject, currentGrade);
+    for (let i = 0; i < 26; i++) {
+      const L = String.fromCharCode(65 + i);
+      const label = sections.has(L) ? `${L}. ${sections.get(L)}` : `${L}.  (new section)`;
+      const opt = el("option", { value: L }, label);
+      if (L === currentLetter) opt.selected = true;
+      letterSelect.appendChild(opt);
+    }
+    // If the selected letter belongs to an existing section and we don't have a name, fill it in
+    const existingName = sections.get(currentLetter);
+    if (existingName && !currentSectionName) {
+      currentSectionName = existingName;
+      sectionNameInput.value = existingName;
+    }
+  }
+  letterSelect.onchange = () => {
+    currentLetter = letterSelect.value;
+    const sections = existingSectionsFor(currentSubject, currentGrade);
+    if (sections.has(currentLetter)) {
+      currentSectionName = sections.get(currentLetter);
+      sectionNameInput.value = currentSectionName;
+    }
+    refreshCode();
+  };
+
+  const sectionNameInput = el("input", { value: currentSectionName, placeholder: "e.g. Multiplication, Fractions, Vocabulary..." });
+  sectionNameInput.oninput = () => { currentSectionName = sectionNameInput.value; updatePreview(); };
+
+  const codeInput = el("input", { value: editing?.code || "", placeholder: "A.1" });
+  codeInput.oninput = () => { codeOverride = true; updateAutoBadge(); updatePreview(); };
+  const autoBadge = el("span", { class: "auto-badge" }, "Auto");
+  const autoBtn = el("button", { class: "btn btn-sm", onclick: () => { codeOverride = false; refreshCode(); } }, "Reset to auto");
+  function updateAutoBadge() {
+    autoBadge.textContent = codeOverride ? "Custom" : "Auto";
+    autoBadge.classList.toggle("off", codeOverride);
+  }
+  function refreshCode() {
+    if (!codeOverride) {
+      codeInput.value = nextCodeFor(currentSubject, currentGrade, currentLetter, editing?.id);
+    }
+    updateAutoBadge();
+    updatePreview();
+  }
+
+  refreshLetters();
+  refreshCode();
+
   root.appendChild(el("div", { class: "row-2" },
-    el("div", { class: "field" }, el("label", {}, "Subject"), subjectSelect),
-    el("div", { class: "field" }, el("label", {}, "Grade"), gradeSelect),
+    el("div", { class: "field" }, el("label", {}, "Section"), letterSelect),
+    el("div", { class: "field" }, el("label", {}, "Section name"), sectionNameInput),
   ));
-  root.appendChild(el("div", { class: "row-2" },
-    el("div", { class: "field" }, el("label", {}, "Section heading (e.g. 'A. ...')"), groupInput),
-    el("div", { class: "field" }, el("label", {}, "Skill code (e.g. A.2)"), codeInput),
+  root.appendChild(el("div", { class: "field" },
+    el("label", {}, "Skill code"),
+    el("div", { class: "code-row" }, codeInput, autoBadge, autoBtn)
   ));
+
+  // ----- Live preview row -----
+  const previewRow = el("div", { class: "preview-row" });
+  function updatePreview() {
+    previewRow.innerHTML = "";
+    const code = codeInput.value.trim() || "A.1";
+    const name = nameInput.value.trim() || "Your skill name";
+    const subject = SUBJECTS.find(s => s.id === currentSubject);
+    previewRow.appendChild(el("span", { class: "label" }, "Preview"));
+    previewRow.appendChild(el("span", { class: "code" }, code));
+    previewRow.appendChild(el("span", { class: "name" }, name));
+    previewRow.appendChild(el("span", { class: "muted", style: "font-size:13px" },
+      `${subject?.name || ""} · ${currentGrade} · ${currentLetter}. ${currentSectionName || "Section"}`));
+  }
+  nameInput.oninput = updatePreview;
+  updatePreview();
+  root.appendChild(previewRow);
 
   // Scoring panel — collapsible
   const baseScoring = { ...DEFAULT_SCORING, ...(editing?.scoring || {}) };
@@ -723,13 +855,15 @@ function renderSkillBuilder(arg1, arg2) {
       masteryBonus: clampInt(bonusInput.value, 0, 1000, 25),
       coinsPerCorrect: clampInt(coinsInput.value, 0, 100, 2),
     };
+    const sectionName = (currentSectionName || "Community").trim();
+    const finalCode = (codeInput.value.trim() || nextCodeFor(currentSubject, currentGrade, currentLetter, editing?.id)).toUpperCase();
     return {
       id: editing?.id || ("s-" + rand()),
-      subject: subjectSelect.value,
-      grade: gradeSelect.value,
+      subject: currentSubject,
+      grade: currentGrade,
       name: nameInput.value.trim(),
-      group: groupInput.value.trim() || "A. Community",
-      code: codeInput.value.trim() || "★",
+      group: `${currentLetter}. ${sectionName}`,
+      code: finalCode,
       questions: questions.map(cleanQuestion),
       scoring,
       builtin: false,
